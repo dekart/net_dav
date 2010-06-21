@@ -89,7 +89,7 @@ module Net #:nodoc:
         headers.each_pair { |key, value| req[key] = value } if headers
         req.content_type = 'text/xml; charset="utf-8"'
         res = handle_request(req, headers)
-        res
+        res.body
       end
 
       def request_returning_body(verb, path, headers, &block)
@@ -246,6 +246,35 @@ module Net #:nodoc:
           end
         end
         @curl
+      end
+
+      def request_sending_body(verb, path, body, headers)
+        raise "unkown returning_body verb #{verb}" unless verb == :put
+
+        url = @uri.merge(path)
+        curl = make_curl
+        curl.url = url.to_s
+        headers.each_pair { |key, value| curl.headers[key] = value } if headers
+        if (@user)
+          curl.userpwd = "#{@user}:#{@pass}"
+        else
+          curl.userpwd = nil
+        end
+        res = nil
+        if block_given?
+          curl.on_body do |frag|
+            yield frag
+            frag.length
+          end
+        end
+        curl.http_put(body)
+        unless curl.response_code >= 200 && curl.response_code < 300
+          header_block = curl.header_str.split(/\r?\n\r?\n/)[-1]
+          msg = header_block.split(/\r?\n/)[0]
+          msg.gsub!(/^HTTP\/\d+.\d+ /, '')
+          raise Net::HTTPError.new(msg, nil)
+        end
+        curl.body_str
       end
 
       def request_returning_body(verb, path, headers)
@@ -516,8 +545,8 @@ module Net #:nodoc:
     #
     def put_string(path, str)
       path = @uri.merge(path).path
-      res = @handler.request_sending_body(:put, path, str, nil)
-      res.body
+
+      @handler.request_sending_body(:put, path, str, nil)
     end
 
     # Delete request
