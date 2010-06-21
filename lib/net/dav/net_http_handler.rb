@@ -61,7 +61,7 @@ module Net
         headers.each_pair { |key, value| req[key] = value } if headers
         req.content_type = 'text/xml; charset="utf-8"'
         res = handle_request(req, headers)
-        res
+        res.body
       end
 
       def request_sending_body(verb, path, body, headers)

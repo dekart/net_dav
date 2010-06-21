@@ -243,8 +243,7 @@ module Net #:nodoc:
     # end
     def put(path, stream, length)
       path = @uri.merge(path).path
-      res = @handler.request_sending_stream(:put, path, stream, length, nil)
-      res.body
+      @handler.request_sending_stream(:put, path, stream, length, nil)
     end
 
     # Stores the content of a string to a URL

@@ -94,29 +94,20 @@ module Net
 
       def request_returning_body(verb, path, headers)
         raise "unkown returning_body verb #{verb}" unless verb == :get
-        url = @uri.merge(path)
-        curl = make_curl
-        curl.url = url.to_s
-        headers.each_pair { |key, value| curl.headers[key] = value } if headers
-        if (@user)
-          curl.userpwd = "#{@user}:#{@pass}"
-        else
-          curl.userpwd = nil
-        end
-        res = nil
+
+        curl = make_curl(path, headers)
+
         if block_given?
           curl.on_body do |frag|
             yield frag
             frag.length
           end
         end
+
         curl.perform
-        unless curl.response_code >= 200 && curl.response_code < 300
-          header_block = curl.header_str.split(/\r?\n\r?\n/)[-1]
-          msg = header_block.split(/\r?\n/)[0]
-          msg.gsub!(/^HTTP\/\d+.\d+ /, '')
-          raise Net::HTTPError.new(msg, nil)
-        end
+
+        check_response(curl)
+        
         curl.body_str
       end
 
